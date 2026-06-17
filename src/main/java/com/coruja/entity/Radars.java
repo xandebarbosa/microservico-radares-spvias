@@ -27,7 +27,7 @@ public class Radars {
     public String placa;
 
     @BsonProperty("LOCAL")
-    public String Local;
+    public String local;
 
     @BsonProperty("SENTIDO")
     public String sentido;

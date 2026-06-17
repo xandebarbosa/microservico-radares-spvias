@@ -252,12 +252,12 @@ public class RadarsService {
                 .hora(parseHora(entity.getHora()))
                 .placa(entity.getPlaca())
                 .praca(entity.getLocal())
-                .sentido(tramsformarSentido(entity.getSentido()))
+                .sentido(transformarSentido(entity.getSentido()))
                 .concessionaria("SPVias")
                 .build();
     }
 
-    private String tramsformarSentido(String sigla) {
+    private String transformarSentido(String sigla) {
         if (sigla == null || sigla.trim().isEmpty()) {
             return "Desconhecido";
         }
