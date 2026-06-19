@@ -73,9 +73,9 @@ public class EurekaRegistrationService {
 
             // 🔹 VALIDAR O STATUS DO REGISTO TAMBÉM
             if (response.getStatus() == 204 || response.getStatus() == 200) {
-                LOG.infof("✅ Microsserviço Rondon registrado no Eureka Server [%s]", instanceId);
+                LOG.infof("✅ Microserviço SPVias registrado no Eureka Server [%s]", instanceId);
             } else {
-                LOG.warnf("⚠️ Falha ao registrar Microsserviço Rondon (Status %d)", response.getStatus());
+                LOG.warnf("⚠️ Falha ao registrar Microsserviço SPVias (Status %d)", response.getStatus());
             }
         } catch (Exception e) {
             LOG.warnf("⚠️ Erro de rede ao registrar no Eureka (Tentará novamente no heartbeat): %s", e.getMessage());

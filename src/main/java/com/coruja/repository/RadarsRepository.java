@@ -3,11 +3,13 @@ package com.coruja.repository;
 import com.coruja.entity.Radars;
 import io.quarkus.mongodb.panache.PanacheMongoRepository;
 import io.quarkus.panache.common.Page;
+import jakarta.enterprise.context.ApplicationScoped;
 import org.bson.Document;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@ApplicationScoped
 public class RadarsRepository implements PanacheMongoRepository<Radars> {
 
     /**

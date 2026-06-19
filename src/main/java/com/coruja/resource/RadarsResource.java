@@ -134,7 +134,7 @@ public class RadarsResource {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  GET /radares/rodovias
+    //  GET /radares/pracas
     // ═══════════════════════════════════════════════════════════════
     @GET
     @Path("/rodovias")
