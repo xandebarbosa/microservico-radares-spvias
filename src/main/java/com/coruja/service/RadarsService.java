@@ -1,9 +1,6 @@
 package com.coruja.service;
 
-import com.coruja.dto.PageMetadata;
-import com.coruja.dto.PracaDTO;
-import com.coruja.dto.RadarPageDTO;
-import com.coruja.dto.RadarsDTO;
+import com.coruja.dto.*;
 import com.coruja.entity.Radars;
 import com.coruja.messaging.RadarMqPublisher;
 import com.coruja.repository.RadarsRepository;
@@ -11,6 +8,7 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import io.quarkus.mongodb.panache.PanacheQuery;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -213,9 +212,9 @@ public class RadarsService {
     }
 
     /**
-     * Retorna a rodovia fixa da concessionária, espelhando o contrato de tabela do Cart.
+     * Retorna a rodovia fixa da concessionária, espelhando o contrato de tabela do SPVias.
      */
-    public List<PracaDTO> listarLocais() {
+    public List<PracaDTO> listarPracas() {
         return List.of(new PracaDTO( 1L, ""));
     }
 
@@ -269,6 +268,130 @@ public class RadarsService {
             case "S" -> "Sul";
             default -> sigla; // Retorna o valor original caso venha algo fora do padrão
         };
+    }
+
+    /**
+     * Retorna todas as localizações fixas de radares para popular o mapa.
+     * Segue o padrão de retorno do microserviço Cart, mas consome o JSON local.
+     */
+    public List<RadarLocationDTO> getAllLocations() {
+        LOG.info("🗺️ [SPVias] Gerando localizações fixas a partir do mapeamento JSON");
+
+        // O mapaCoordenadasService já carrega o localizacoes-rondon.json no startup
+        return mapaCoordenadas.getAllCoordenadas().entrySet().stream()
+                .map( entry -> {
+                    RadarLocationDTO dto = new RadarLocationDTO();
+
+                    // 🔥 Gera um número Long único baseado no nome do KM para satisfazer o BFF
+                    long numericId = Math.abs((long) entry.getKey().hashCode());
+                    dto.setId(numericId);
+
+                    dto.setConcessionaria("SPVias");
+                    dto.setPraca(entry.getKey());
+                    dto.setLatitude(entry.getValue().latitude);
+                    dto.setLongitude(entry.getValue().longitude);
+                    dto.setSentido("Ambos");
+                    return dto;
+                }).collect(Collectors.toList());
+    }
+
+
+    /**
+     * 2. BUSCA GEOGRÁFICA (Raio / Geo-Search)
+     * Contorna a falta de colunas geográficas no MongoDB filtrando os KMs em memória.
+     */
+    public RadarPageDTO buscaGeografica(Double latCentro, Double lngCentro, Double raioMetros, String dataBusca, int page, int size) {
+        // 1. Encontrar quais KMs fixos estão dentro do raio solicitado
+        List<String> kmsNoRaio  = new ArrayList<>();
+
+        for (Map.Entry<String, MapaCoordenadasService.Coordenada> entry : mapaCoordenadas.getAllCoordenadas().entrySet()) {
+            double distancia = calcularDistanciaHaversine(
+                    latCentro, lngCentro,
+                    entry.getValue().latitude, entry.getValue().longitude
+            );
+
+            if (distancia <= raioMetros) {
+                kmsNoRaio.add(entry.getKey());
+            }
+        }
+        if (kmsNoRaio.isEmpty()) {
+            return new RadarPageDTO();
+        }
+
+        // 2. Consultar o MongoDB
+        String query = "data = ?1 and local in ?2";
+        PanacheQuery<Radars> panacheQuery = radarsRepository.find(query, dataBusca, kmsNoRaio);
+
+        panacheQuery.page(page, size);
+        List<Radars> radaresEncontrados = panacheQuery.list();
+
+        // 3. Mapear para RadarsDTO
+        List<RadarsDTO> content = radaresEncontrados.stream().map(radar -> {
+            RadarsDTO dto = new RadarsDTO();
+
+            // CONVERSÃO SEGURA PARA LONG: Transforma o hash alfanumérico num número positivo
+            if (radar.getId() != null) {
+                long numericId = Math.abs((long) radar.getId().toHexString().hashCode());
+                dto.setId(numericId);
+            }
+
+            // Conversão de data e hora
+            try {
+                if (radar.getData() != null && !radar.getData().isBlank()) {
+                    dto.setData(LocalDate.parse(radar.getData()));
+                }
+                if (radar.getHora() != null && !radar.getHora().isBlank()) {
+                    dto.setHora(LocalTime.parse(radar.getHora()));
+                }
+            } catch (Exception e) {
+                // Ignora falhas de formatação de data
+            }
+
+            dto.setPlaca(radar.getPlaca());
+            dto.setPraca(radar.getLocal());
+            dto.setSentido(radar.getSentido());
+            dto.setConcessionaria(radar.getConcessionaria());
+
+            // 4. Injeta as coordenadas
+            if (radar.getLocal() != null) {
+                String chaveBusca = radar.getLocal().toUpperCase().replace(" ", "");
+                MapaCoordenadasService.Coordenada coord = mapaCoordenadas.getCoordenada(chaveBusca);
+
+                if(coord != null) {
+                    dto.setLatitude(coord.latitude);
+                    dto.setLongitude(coord.longitude);
+                }
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
+
+        // 5. Retornar dados paginados
+        RadarPageDTO response = new RadarPageDTO();
+        response.setContent(content);
+
+        PageMetadata meta = new PageMetadata();
+        meta.setNumber(page);
+        meta.setSize(size);
+        meta.setTotalElements(panacheQuery.count());
+        meta.setTotalPages(panacheQuery.pageCount());
+        response.setPage(meta);
+
+        return response;
+    }
+
+    /**
+     * Utilitário: Fórmula de Haversine para calcular distância em metros entre duas coordenadas.
+     */
+    private double calcularDistanciaHaversine(double lat1, double lon1, double lat2, double lon2) {
+        final int RAIO_TERRA_KM = 6371;
+        double latDist = Math.toRadians(lat2 - lat1);
+        double lonDist = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDist / 2) * Math.sin(latDist / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDist / 2) * Math.sin(lonDist / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return RAIO_TERRA_KM * c * 1000; // Converte para metros
     }
 
     /** Tenta múltiplos formatos de data para tolerância a dados heterogêneos. */
