@@ -1,12 +1,12 @@
 {
-  "Iaras": { "latitude": -23.3301, "longitude": -47.8470 },
-  "Morro do Alto - Sul": { "latitude": -23.471, "longitude": -47.9681 },
-  "Morro do Alto - Norte": { "latitude": -23.4352, "longitude": -47.9388 },
-  "Buri": { "latitude": -23.9387, "longitude": -48.5733 },
-  "Itararé": { "latitude": -24.0902, "longitude": -49.2263 },
-  "Avaré": { "latitude": -22.9788, "longitude": -48.8213 },
-  "Quadra": { "latitude": -23.2459, "longitude": -48.0828 },
-  "Itatinga": { "latitude": -23.0845, "longitude": -48.5116 },
-  "Gramadão": { "latitude": -23.8721, "longitude": -48.2404 },
-  "Alambari": { "latitude": -23.5523, "longitude": -47.7751 }
+  "Iaras - SP 280 - KM 278+000": { "latitude": -23.3301, "longitude": -47.8470 },
+  "Itapetininga - SP 127 - KM 133+900": { "latitude": -23.471, "longitude": -47.9681 },
+  "Tatuí - SP 127 - KM 128+900": { "latitude": -23.4352, "longitude": -47.9388 },
+  "Taquarivaí - SP 258 - KM 250+145": { "latitude": -23.9387, "longitude": -48.5733 },
+  "Itararé - SP 258 - KM 326+637": { "latitude": -24.0902, "longitude": -49.2263 },
+  "Avaré - SP 255 - KM 240+300": { "latitude": -22.9788, "longitude": -48.8213 },
+  "Quadra SP 280 - KM 158+300": { "latitude": -23.2459, "longitude": -48.0828 },
+  "Itatinga - SP 280 - KM 208+400": { "latitude": -23.0845, "longitude": -48.5116 },
+  "Capão Bonito - SP 127 - KM 196+725": { "latitude": -23.8721, "longitude": -48.2404 },
+  "Sarapuí - SP 270 - KM 135+300": { "latitude": -23.5523, "longitude": -47.7751 }
 }
